@@ -5,9 +5,10 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title> Group008 </title>
+
+    <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
     <script defer src="https://pyscript.net/latest/pyscript.js"></script>
-    <link rel="stylesheet" href="style.css">
     
 </head>
 <body>
@@ -15,20 +16,96 @@
     
     <h2> Stuart Kirwin, Zack Labkovski, Jonathan Mager, Daniel Nagle, Nik Patel </h2>
     <div class='tableauPlaceholder' id='viz1681849257914' style='position: relative'><noscript><a href='#'><img alt='Dashboard 1 ' src='https:&#47;&#47;public.tableau.com&#47;static&#47;images&#47;Ta&#47;TableauforProject_16818492250260&#47;Dashboard1&#47;1_rss.png' style='border: none' /></a></noscript><object class='tableauViz'  style='display:none;'><param name='host_url' value='https%3A%2F%2Fpublic.tableau.com%2F' /> <param name='embed_code_version' value='3' /> <param name='site_root' value='' /><param name='name' value='TableauforProject_16818492250260&#47;Dashboard1' /><param name='tabs' value='no' /><param name='toolbar' value='yes' /><param name='static_image' value='https:&#47;&#47;public.tableau.com&#47;static&#47;images&#47;Ta&#47;TableauforProject_16818492250260&#47;Dashboard1&#47;1.png' /> <param name='animate_transition' value='yes' /><param name='display_static_image' value='yes' /><param name='display_spinner' value='yes' /><param name='display_overlay' value='yes' /><param name='display_count' value='yes' /><param name='language' value='en-US' /><param name='filter' value='publish=yes' /></object></div>                <script type='text/javascript'>                    var divElement = document.getElementById('viz1681849257914');                    var vizElement = divElement.getElementsByTagName('object')[0];                    if ( divElement.offsetWidth > 800 ) { vizElement.style.width='1000px';vizElement.style.height='827px';} else if ( divElement.offsetWidth > 500 ) { vizElement.style.width='1000px';vizElement.style.height='827px';} else { vizElement.style.width='100%';vizElement.style.height='1177px';}                     var scriptElement = document.createElement('script');                    scriptElement.src = 'https://public.tableau.com/javascripts/api/viz_v1.js';                    vizElement.parentNode.insertBefore(scriptElement, vizElement);                </script>
+    
     <py-config>
-       packages = ["ssl", "pandas", "numpy", "matplotlib", "seaborn", "geopy", "folium", "statsmodels"]
-       [[fetch]]
-        files = ["./zhvi.csv", "./Zillow_Airbnb.csv", "./FEDFUNDS.csv", "./CPIAUCSL.csv", "./UNRATE.csv"]
+        packages = [
+          
+          "numpy",
+          "pandas",
+          "folium",
+          "seaborn",
+          "geocoder",
+          "matplotlib",
+          "ssl"
+          
+        ]
+        [[fetch]]
+        files = ["./heatmap2.py", "./zhvi.csv"]
+        
     </py-config>
-   
+    <py-script >
+        import pandas as pd
+        import numpy as np
+        import matplotlib as plt
+        import seaborn as sns
+        import geocoder
+        import folium
+        from folium.plugins import HeatMap
+        from folium.plugins import HeatMapWithTime
+        from pandas.tseries.offsets import MonthEnd
+        import ssl
+
+        pd.set_option('mode.chained_assignment', None)
+
+        df = pd.read_csv("./zhvi.csv")
+        df = df.dropna()
+
+        g = geocoder.arcgis('78258')
+
+        city = "Columbus"
+        month = "June"
+        year = 2017
+
+        
+        
+        
+        point = df.loc[df['City'].str.contains(str(city))]
+
+        lats = []
+        longs = []
+        for i in point['RegionName'].to_list():
+            if len(str(i)) < 5:
+                j = '0'+str(i)
+            else:
+                j = str(i)
+            g = geocoder.arcgis(j)
+            lats.append(g.lat)
+            longs.append(g.lng)
+        point['Latitude'] = lats
+        point['Longitude'] = longs
+        
+        point = point.drop(columns=['RegionID', 'SizeRank', 'RegionType', 'StateName', 'State', 'City', 'CountyName'])
+        temp_cols=point.columns.tolist()
+        new_cols=temp_cols[-2:] + temp_cols[:-2]
+        a=point[new_cols]
+        b = a.melt(id_vars=["RegionName", "Metro", "Latitude", "Longitude"], 
+                var_name="Date", 
+                value_name="Value")
+        b['Date'] = pd.to_datetime(b['Date'])
+        zoom_index = [b['Latitude'].iloc[0], b['Longitude'].iloc[0]]
+        
+        time = pd.to_datetime((str(month)+str(year))) + MonthEnd(1)
+        filtered = b.loc[b['Date']==time]
+        f = filtered.set_index('Date')
+        
+        m = folium.Map(location=zoom_index, zoom_start=11)
+        y = filtered[['Latitude', 'Longitude', 'Value']]
+        hm = HeatMap(y,radius=25,min_opacity=.7)
+        hm.add_to(m)
+        
+        display(m)
+
+        
+
+
+    </py-script>
     
     <h1> Regression Analysis</h1>
-        <py-script src = "./modeling.py">
-            await micropip.install("statsmodels")
-            print("Hello")
-
-        </py-script>
+        
 
     <h1> Time Series Analysis </h1>
+    <img src="./TS Figure_1.png" alt="TS Figure 1">
+    <img src="./TS Figure_2.png" alt="TS Figure 2">
+    <img src="./TS_Figure 3.png" alt="TS Figure 3">
 </body>
 </html>
